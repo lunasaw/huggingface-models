@@ -7,14 +7,18 @@ if [[ "${1:-}" == --help ]]; then
   cat <<'EOF'
 Usage: start-qwen38-bf16-vllm.sh [--dry-run] [extra vLLM arguments...]
 
-Loads ROOT/.env (or QWEN_ENV_FILE), then starts the official BF16 model.
+Loads this project's .env (or QWEN_ENV_FILE), then starts the official BF16 model.
+ROOT/.env is a fallback for existing BF16 deployments.
 See .env.example for GPU, port, model path and capacity settings.
 --dry-run prints the command without loading weights or starting a server.
 EOF
   exit 0
 fi
 
-ENV_FILE="${QWEN_ENV_FILE:-$ROOT/.env}"
+ENV_FILE="${QWEN_ENV_FILE:-$SCRIPT_DIR/.env}"
+if [[ -z "${QWEN_ENV_FILE:-}" && ! -f "$ENV_FILE" ]]; then
+  ENV_FILE="$ROOT/.env"
+fi
 if [[ -f "$ENV_FILE" ]]; then
   set -a
   source "$ENV_FILE"
@@ -29,7 +33,9 @@ export HF_HUB_OFFLINE="${HF_HUB_OFFLINE:-1}"
 
 # Keep this host's validated runtime, while allowing other installations.
 if [[ -z "${VLLM_BIN:-}" ]]; then
-  if [[ -x /data/miniconda3/envs/qwen38-hauhau-vllm/bin/vllm ]]; then
+  if [[ -n "${CONDA_PREFIX:-}" && -x "$CONDA_PREFIX/bin/vllm" ]]; then
+    VLLM_BIN="$CONDA_PREFIX/bin/vllm"
+  elif [[ -x /data/miniconda3/envs/qwen38-hauhau-vllm/bin/vllm ]]; then
     VLLM_BIN=/data/miniconda3/envs/qwen38-hauhau-vllm/bin/vllm
   else
     VLLM_BIN=vllm

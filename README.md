@@ -1,18 +1,28 @@
 # Hugging Face 模型部署脚本
 
-按模型保留现有目录结构，集中管理本地 vLLM 启动、模型下载、接口验证和性能测试。仓库只包含代码、配置示例和文档；`models/` 权重、日志、验证结果和基准产物保留在本机，不提交 Git。
+按模型保留现有目录结构，每个模型项目独立提供镜像下载、vLLM 启动、Conda 环境、接口验证和文档，根目录保留统一索引和历史性能测试。仓库只包含代码、配置示例和文档；`models/` 权重、日志、验证结果和基准产物保留在本机，不提交 Git。
 
 ## 目录
 
 ```text
 .
 ├── qwen38-27b-Base/                 # 官方 BF16 模型
+│   ├── README.md / .env.example   # 项目说明与配置
+│   ├── environment.yml           # Conda 环境（引用 requirements.txt）
+│   ├── environment.lock.yml      # 完整环境版本快照
+│   ├── setup-env.sh              # 创建环境
 │   ├── start-qwen38-bf16-vllm.sh    # 正式启动入口
 │   ├── qwen38-bf16-vllm.service     # 当前机器的 systemd 配置
 │   ├── download-qwen38-mirror.py    # 固定版本下载与哈希校验
 │   ├── verify-qwen38-service.py     # 中文、流式、工具调用、图片检查
 │   └── metadata/mirror-tree.json   # 下载必需的固定版本文件清单
-├── qwen38-27b-Uncensored-HauhauCS/  # 原 Hauhau 入口，兼容转发到 BF16
+├── qwen38-27b-Uncensored-HauhauCS/  # 独立 Hauhau AWQ-MTP 项目
+│   ├── README.md / .env.example
+│   ├── environment.yml / requirements.txt / environment.lock.yml
+│   ├── setup-env.sh
+│   ├── download-hauhau-mirror.py / metadata/mirror-tree.json
+│   ├── start-hauhau-vllm.sh / hauhau-vllm.service
+│   └── verify-hauhau-service.py
 ├── benchmarks/hauhau-local-20261024/
 │   ├── run_matrix.py              # 完整压测矩阵
 │   ├── run_matrix_safe.py         # 较低负载的矩阵
@@ -28,23 +38,32 @@
 
 目录名中的连字符保持不变，Python 脚本直接执行，不要求作为 Python 包安装。
 
+## 独立项目入口
+
+| 项目 | 下载 | 启动 | 环境与操作文档 |
+|---|---|---|---|
+| 官方 BF16 | [download-qwen38-mirror.py](qwen38-27b-Base/download-qwen38-mirror.py) | [start-qwen38-bf16-vllm.sh](qwen38-27b-Base/start-qwen38-bf16-vllm.sh) | [Base README](qwen38-27b-Base/README.md) |
+| Hauhau AWQ-MTP | [download-hauhau-mirror.py](qwen38-27b-Uncensored-HauhauCS/download-hauhau-mirror.py) | [start-hauhau-vllm.sh](qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh) | [Hauhau README](qwen38-27b-Uncensored-HauhauCS/README.md) |
+
+两个项目均包含全部文件的固定版本镜像清单、Conda 环境定义、直接依赖、完整环境快照、配置示例和接口验证脚本。每个目录中的执行脚本不依赖另一个模型目录。权重和输出仍统一存放于项目目录的上一级 `models/`、`results/`。
+
 ## 环境
 
-工具脚本使用 Python 3.11+，下载还需要 `curl`。本机已验证的服务环境为 `/data/miniconda3/envs/qwen38-hauhau-vllm`，vLLM 0.27.1、PyTorch 2.13.0；迁移到其他机器时应准备与 GPU / CUDA 匹配的 vLLM 环境。工具依赖可以单独安装：
+项目环境使用 Python 3.12，下载使用 `huggingface_hub` 的固定版本文件下载与缓存续传。先按各项目 README 创建对应 Conda 环境。本机已验证的服务环境为 `/data/miniconda3/envs/qwen38-hauhau-vllm`，vLLM 0.27.1、PyTorch 2.13.0；迁移到其他机器时应准备与 GPU / CUDA 匹配的 vLLM 环境。工具依赖可以单独安装：
 
 ```bash
 python3 -m pip install -r requirements-tools.txt
 ```
 
-启动脚本优先使用显式配置的 `VLLM_BIN`，否则使用上述本机环境；该路径不存在时查找 `PATH` 中的 `vllm`。
+启动脚本优先使用显式配置的 `VLLM_BIN`，然后查询激活的 Conda 环境，再回退到上述本机环境或 `PATH`。`requirements-tools.txt` 只包含报告等辅助工具，不能替代模型项目的 Conda 环境定义。
 
 ## 下载与启动
 
 以下命令在仓库根目录执行，脚本本身也支持从其他工作目录调用。
 
 ```bash
-cp .env.example .env
-# 按机器配置编辑 .env，尤其是 VLLM_BIN、CUDA_VISIBLE_DEVICES 和 TENSOR_PARALLEL_SIZE。
+cp qwen38-27b-Base/.env.example qwen38-27b-Base/.env
+# 按机器配置编辑项目 .env，尤其是 VLLM_BIN、CUDA_VISIBLE_DEVICES 和 TENSOR_PARALLEL_SIZE。
 
 # 查看下载计划；不会联网或写模型文件。
 python3 qwen38-27b-Base/download-qwen38-mirror.py --dry-run
@@ -62,9 +81,9 @@ bash qwen38-27b-Base/start-qwen38-bf16-vllm.sh
 
 默认使用 GPU `4,5,6,7` / TP=4、端口 `18089`、BF16 权重、FP8 KV cache、262144 上下文、最大 2 个序列、MTP 3 tokens。主模型名为 `Qwen3.8 27b`，兼容别名为 `qwen3.8-27b`。参数保留现有部署设置，不保证适用于其他显存容量。
 
-配置加载顺序为：脚本默认值、进程环境变量、`.env`；追加的 vLLM 命令行参数最后传入。可用 `QWEN_ENV_FILE=/path/to/config` 指定配置文件。`.env` 按 Bash 语法加载，只应放置可信本地配置。模型路径可设为 `MODEL_DIR`，下载脚本使用对应的 `--model-dir`。
+配置加载顺序为：脚本默认值、进程环境变量、项目 `.env`；追加的 vLLM 命令行参数最后传入。可用 `QWEN_ENV_FILE=/path/to/config` 指定配置文件。`.env` 按 Bash 语法加载，只应放置可信本地配置。模型路径可设为 `MODEL_DIR`，下载脚本使用对应的 `--model-dir`。
 
-`qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh` 保留此前的兼容行为：启动官方 BF16 服务。该入口不加载磁盘上的历史 AWQ 权重。
+`qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh` 独立加载 Hauhau AWQ-MTP 权重，默认 TP=2、端口 18090。两个项目的默认 GPU 有重叠，分别运行或先分配互不重叠的空闲 GPU。Base 保留根 `.env` 回退；Hauhau 只读取自己的配置。
 
 ## systemd
 

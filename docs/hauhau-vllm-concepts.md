@@ -1,12 +1,12 @@
 # HauhauCS Qwen vLLM 历史部署概念说明
 
-> 本文记录 2026-10-24 的 AWQ 部署和概念，以下“当前”均指当时的配置。服务现已切换为官方 BF16；端口、GPU、上下文长度以[根目录 README](../README.md)和正式启动脚本为准。Hauhau 启动入口现在兼容转发到官方 BF16。文中基准结果和日志仅在本机保留。
+> 本文记录 2026-10-24 的 AWQ 部署和概念，以下“当前”均指当时的配置。服务现已切换为官方 BF16；端口、GPU、上下文长度以[根目录 README](../README.md)和正式启动脚本为准。Hauhau 目录已恢复独立 AWQ-MTP 启动入口，配置见该项目 README。文中基准结果和日志仅在本机保留。
 
 本文说明当前这套服务中出现的模型格式、量化、推理、GPU 并行、缓存、MTP 和性能指标。内容以本机实际启动脚本、模型目录配置和基准结果为准。
 
 相关文件：
 
-- [兼容启动脚本](../qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh)
+- [Hauhau 启动脚本](../qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh)
 - 并发 1 基准：`results/hauhau-vllm/random-1024in-256out-c1.json`（本机文件）
 - 并发 4 基准：`results/hauhau-vllm/random-1024in-256out-c4.json`（本机文件）
 - vLLM 日志：`logs/hauhau-vllm-20261024-1908.log`（本机文件）
@@ -842,7 +842,7 @@ conda activate /data/miniconda3/envs/qwen38-hauhau-vllm
 bash /data/ai/chenzhangyue/huggingface-models/qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh
 ```
 
-历史启动方式使用 `tee` 保存日志。现有兼容入口转发到 BF16，前台日志输出至终端；仓库内 systemd 配置使用 journal。启动阶段可能较慢，因为需要加载权重、分配 KV cache、编译 kernel、预热并捕获 CUDA Graph。
+历史启动方式使用 `tee` 保存日志。现有独立入口加载 Hauhau，前台日志输出至终端；仓库内 systemd 配置使用 journal。启动阶段可能较慢，因为需要加载权重、分配 KV cache、编译 kernel、预热并捕获 CUDA Graph。
 
 ### 14.3 检查 GPU
 

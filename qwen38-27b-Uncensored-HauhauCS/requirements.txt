@@ -1,0 +1,11 @@
+# Direct dependencies pinned to the validated Linux x86_64 / CUDA 13.0 runtime.
+# Transitive dependencies are resolved by pip; environment.lock.yml records the full host snapshot.
+vllm==0.27.1
+torch==2.13.0
+torchvision==0.28.0
+torchaudio==2.11.0
+transformers==5.15.1
+huggingface-hub==1.28.0
+compressed-tensors==0.17.0
+flashinfer-python==0.6.16.post3
+Pillow==12.3.0

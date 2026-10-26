@@ -1,73 +1,32 @@
 #!/usr/bin/env python3
-"""Resume the pinned official model from the mirror and verify every file."""
+"""Download every file of a pinned model snapshot from a Hugging Face mirror."""
 import argparse
 import concurrent.futures
 import hashlib
 import json
-from pathlib import Path
-import re
-import shutil
-import subprocess
-import threading
-import time
+import os
+from pathlib import Path, PurePosixPath
 
 PACKAGE = Path(__file__).resolve().parent
 ROOT = PACKAGE.parent
+REPO_ID = 'Qwen/Qwen3.8-27B'
+REVISION = '1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0'
 MODEL = ROOT / 'models/Qwen3.8-27B'
 RESULTS = ROOT / 'results/qwen38-bf16-deploy'
-REVISION = '1d4bf0f2ff6012fd82039f2fa52739d0dd7c60c0'
-BASE = f'https://hf-mirror.com/Qwen/Qwen3.8-27B/resolve/{REVISION}/'
 MANIFEST = PACKAGE / 'metadata/mirror-tree.json'
-CHUNK = 32 * 1024**2
-LOCK = threading.Lock()
-URLS = {}
 
 
-def direct_url(name):
-    with LOCK:
-        cached = URLS.get(name)
-        if cached and time.time() - cached[0] < 2400:
-            return cached[1]
-        headers = subprocess.check_output([
-            'curl', '-fsSI', '--connect-timeout', '15', '--max-time', '45',
-            BASE + name + '?download=true',
-        ], text=True)
-        urls = re.findall(r'^location:\s*(.+)$', headers, re.I | re.M)
-        url = urls[-1].strip() if urls else BASE + name + '?download=true'
-        URLS[name] = (time.time(), url)
-        return url
-
-
-def segment(task):
-    name, start, end = task
-    folder = MODEL / '.segments' / name
-    folder.mkdir(parents=True, exist_ok=True)
-    dst = folder / f'{start:012d}-{end:012d}'
-    length = end - start + 1
-    if dst.exists() and dst.stat().st_size == length:
-        return length
-    tmp = dst.with_suffix('.part')
-    headers = dst.with_suffix('.headers')
-    for attempt in range(6):
-        url = direct_url(name)
-        proc = subprocess.run([
-            'curl', '-fsSL', '--connect-timeout', '15', '--max-time', '240',
-            '--speed-limit', '16384', '--speed-time', '30',
-            '--range', f'{start}-{end}', '-D', str(headers), '-o', str(tmp), url,
-        ], capture_output=True)
-        text = headers.read_text() if headers.exists() else ''
-        ranges = re.findall(r'content-range:\s*bytes\s+(\d+)-(\d+)/(\d+)', text, re.I)
-        correct_range = bool(ranges) and tuple(map(int, ranges[-1][:2])) == (start, end)
-        if proc.returncode == 0 and correct_range and tmp.stat().st_size == length:
-            tmp.replace(dst)
-            headers.unlink(missing_ok=True)
-            return length
-        if '403' in text or '401' in text:
-            with LOCK:
-                URLS.pop(name, None)
-        print(f'Retry {name} offset={start} attempt={attempt+1} rc={proc.returncode}', flush=True)
-        time.sleep(2)
-    raise RuntimeError(f'Failed segment {name}: {start}-{end}')
+def load_manifest():
+    entries = json.loads(MANIFEST.read_text())
+    names = set()
+    for entry in entries:
+        path = PurePosixPath(entry['path'])
+        if path.is_absolute() or '..' in path.parts or entry['path'] in names:
+            raise ValueError(f'Unsafe or duplicate manifest path: {path}')
+        if entry.get('type') != 'file' or entry['size'] < 0:
+            raise ValueError(f'Invalid file metadata: {path}')
+        names.add(entry['path'])
+    return entries
 
 
 def verify(entry, path=None):
@@ -79,78 +38,87 @@ def verify(entry, path=None):
             actual = hashlib.file_digest(stream, 'sha256').hexdigest()
             expected = entry['lfs']['oid']
         else:
-            data = stream.read()
-            actual = hashlib.sha1(b'blob ' + str(len(data)).encode() + b'\0' + data).hexdigest()
-            expected = entry['oid']
+            digest = hashlib.sha1(f"blob {entry['size']}\0".encode())
+            for block in iter(lambda: stream.read(8 * 1024**2), b''):
+                digest.update(block)
+            actual, expected = digest.hexdigest(), entry['oid']
     if actual != expected:
         raise RuntimeError(f'Hash mismatch: {path.name}')
     return {'size': entry['size'], 'hash': actual, 'verified': True}
 
 
+def fetch_file(entry, args, downloader):
+    path = args.model_dir / entry['path']
+    if not args.force_download and path.exists():
+        # Do not silently replace local modifications or a running model's files.
+        return verify(entry, path)
+    downloader(repo_id=REPO_ID, filename=entry['path'], revision=REVISION,
+               local_dir=args.model_dir, endpoint=args.endpoint,
+               force_download=args.force_download)
+    return verify(entry, path)
+
+
 def main():
-    global MODEL, RESULTS
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--model-dir', type=Path, default=MODEL)
     parser.add_argument('--results-dir', type=Path, default=RESULTS)
-    parser.add_argument('--workers', type=int, default=32)
-    parser.add_argument('--verify-only', action='store_true', help='Verify local files without downloading')
-    parser.add_argument('--dry-run', action='store_true', help='Show the pinned download plan without network or writes')
+    parser.add_argument('--endpoint', default=os.environ.get('HF_ENDPOINT', 'https://hf-mirror.com'))
+    parser.add_argument('--workers', type=int, default=4)
+    parser.add_argument('--verify-only', action='store_true', help='Check all local files without network access')
+    parser.add_argument('--force-download', action='store_true', help='Replace local files with the pinned upstream versions')
+    parser.add_argument('--dry-run', action='store_true', help='Print the complete manifest without network or writes')
     args = parser.parse_args()
     if args.workers < 1:
         parser.error('--workers must be positive')
-    MODEL, RESULTS = args.model_dir.resolve(), args.results_dir.resolve()
-    entries = json.loads(MANIFEST.read_text())
+    if args.verify_only and args.force_download:
+        parser.error('--verify-only cannot be combined with --force-download')
+    args.model_dir = args.model_dir.resolve()
+    args.results_dir = args.results_dir.resolve()
+    entries = load_manifest()
     if args.dry_run:
-        print(json.dumps({'revision': REVISION, 'model_dir': str(MODEL),
-                          'results_dir': str(RESULTS), 'files': len(entries),
-                          'total_bytes': sum(e['size'] for e in entries)}, indent=2))
-        return
-    MODEL.mkdir(parents=True, exist_ok=True)
-    RESULTS.mkdir(parents=True, exist_ok=True)
-    plans = []
-    tasks = []
-    for entry in ([] if args.verify_only else entries):
-        name, size = entry['path'], entry['size']
-        dst = MODEL / name
-        if dst.exists() and dst.stat().st_size == size:
-            continue
-        part = MODEL / (name + '.part')
-        part.parent.mkdir(parents=True, exist_ok=True)
-        offset = part.stat().st_size if part.exists() else 0
-        if offset > size:
-            raise RuntimeError(f'Oversized partial file: {name}')
-        pieces = [(name, start, min(start + CHUNK, size) - 1) for start in range(offset, size, CHUNK)]
-        plans.append((entry, part, pieces))
-        tasks.extend(pieces)
-    print(f'Pending files={len(plans)}, segments={len(tasks)}, remaining={sum(e-s+1 for _,s,e in tasks)/1024**3:.2f} GiB', flush=True)
-    started = time.monotonic()
-    completed = 0
-    last = started
+        print(json.dumps({'repo_id': REPO_ID, 'revision': REVISION,
+                          'endpoint': args.endpoint, 'model_dir': str(args.model_dir),
+                          'results_dir': str(args.results_dir), 'files': len(entries),
+                          'total_bytes': sum(e['size'] for e in entries),
+                          'filenames': [e['path'] for e in entries]}, indent=2))
+        return 0
+    downloader = None
+    if not args.verify_only:
+        try:
+            from huggingface_hub import hf_hub_download
+        except ImportError:
+            parser.error('Install this project\'s requirements.txt in its Conda environment first')
+        downloader = hf_hub_download
+        args.model_dir.mkdir(parents=True, exist_ok=True)
+    verified, failures = {}, {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = [pool.submit(segment, task) for task in tasks]
+        futures = {
+            (pool.submit(verify, entry, args.model_dir / entry['path']) if args.verify_only
+             else pool.submit(fetch_file, entry, args, downloader)): entry['path']
+            for entry in entries
+        }
         for future in concurrent.futures.as_completed(futures):
-            completed += future.result()
-            now = time.monotonic()
-            if now - last >= 20:
-                print(f'Segments received={completed/1024**3:.2f} GiB, average={completed/1024**2/(now-started):.1f} MiB/s', flush=True)
-                last = now
-    for entry, part, pieces in plans:
-        with part.open('ab') as out:
-            for name, start, end in pieces:
-                with (MODEL / '.segments' / name / f'{start:012d}-{end:012d}').open('rb') as source:
-                    shutil.copyfileobj(source, out, 8 * 1024**2)
-        # A partial or corrupt file must never replace a model file.
-        verify(entry, path=part)
-        part.replace(MODEL / entry['path'])
-        print('Assembled', entry['path'], flush=True)
-    verified = {}
-    for entry in entries:
-        verified[entry['path']] = verify(entry)
-        print('Verified', entry['path'], flush=True)
-    (RESULTS / 'verified-files.json').write_text(json.dumps(verified, indent=2) + '\n')
-    (RESULTS / 'revision.txt').write_text(REVISION + '\n')
-    print(f'VERIFICATION_COMPLETE: all {len(entries)} files verified against repository hashes', flush=True)
+            name = futures[future]
+            try:
+                verified[name] = future.result()
+                print(f'Verified {name}', flush=True)
+            except Exception as exc:
+                # Signed download URLs may contain credentials; keep them out of logs.
+                failures[name] = type(exc).__name__
+                print(f'FAILED {name}: {type(exc).__name__}', flush=True)
+    args.results_dir.mkdir(parents=True, exist_ok=True)
+    report = {'repo_id': REPO_ID, 'revision': REVISION,
+              'verified': verified, 'failed': failures}
+    (args.results_dir / 'download-verification.json').write_text(json.dumps(report, indent=2) + '\n')
+    if failures:
+        print(f'INCOMPLETE: {len(verified)}/{len(entries)} files verified. '
+              'Check the endpoint and local files; --force-download replaces local files explicitly.')
+        return 1
+    (args.results_dir / 'verified-files.json').write_text(json.dumps(verified, indent=2) + '\n')
+    (args.results_dir / 'revision.txt').write_text(REVISION + '\n')
+    print(f'VERIFICATION_COMPLETE: all {len(entries)} files verified against repository hashes')
+    return 0
 
 
 if __name__ == '__main__':
-    main()
+    raise SystemExit(main())

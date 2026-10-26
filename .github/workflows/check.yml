@@ -16,7 +16,9 @@ jobs:
         run: |
           bash -n qwen38-27b-Base/start-qwen38-bf16-vllm.sh
           bash -n qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh
+          bash -n qwen38-27b-Base/setup-env.sh
+          bash -n qwen38-27b-Uncensored-HauhauCS/setup-env.sh
       - name: Python syntax
-        run: python -m compileall -q qwen38-27b-Base benchmarks tests
+        run: python -m compileall -q qwen38-27b-Base qwen38-27b-Uncensored-HauhauCS benchmarks tests
       - name: Offline regression tests
         run: python -m unittest discover -s tests -v

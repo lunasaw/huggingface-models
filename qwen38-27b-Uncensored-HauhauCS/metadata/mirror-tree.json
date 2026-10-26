@@ -1,0 +1,104 @@
+[
+  {
+    "type": "file",
+    "oid": "52373fe24473b1aa44333d318f578ae6bf04b49b",
+    "size": 1570,
+    "path": ".gitattributes"
+  },
+  {
+    "type": "file",
+    "oid": "caeb93a277fd0023bc4b850d64832f6282e68db2",
+    "size": 14452,
+    "path": "README.md"
+  },
+  {
+    "type": "file",
+    "oid": "c0c686f9c38d70d179fb7b5f5aa7530bc913dda3",
+    "size": 8952,
+    "path": "chat_template.jinja"
+  },
+  {
+    "type": "file",
+    "oid": "d52485572f1a1ee01a1f2ebe825c0e45ee9219d3",
+    "size": 8953,
+    "path": "chat_template_medium.jinja"
+  },
+  {
+    "type": "file",
+    "oid": "05831f7036c64344e91f928ca3a1271693b8d9b1",
+    "size": 20650,
+    "path": "config.json"
+  },
+  {
+    "type": "file",
+    "oid": "a7f0cbecda5b0064ed703a6495f388ac566f5901",
+    "size": 244,
+    "path": "generation_config.json"
+  },
+  {
+    "type": "file",
+    "oid": "89f8ff683e8e1f2c6db4619dd18e282f2522b418",
+    "size": 849400424,
+    "lfs": {
+      "oid": "e24a692bc1e9ad1e526cf7c331661c08667ecbf18ef03399d6c75215f5ba2739",
+      "size": 849400424,
+      "pointerSize": 134
+    },
+    "xetHash": "2776280ad520f80581d497444b7184230cf2d2c8e274f1dea45cebb4881bddee",
+    "path": "model-mtp.safetensors"
+  },
+  {
+    "type": "file",
+    "oid": "101ecabe87f280afc66376110cee10c080183029",
+    "size": 18698467264,
+    "lfs": {
+      "oid": "171ffd533ca557bd5118683a345b23a2785989e223a367d1283c19d6266286c5",
+      "size": 18698467264,
+      "pointerSize": 136
+    },
+    "xetHash": "c775851f2d3f2cba3552d028eb2a287a4bb94ac01c2cbd186784177f6a3a0789",
+    "path": "model.safetensors"
+  },
+  {
+    "type": "file",
+    "oid": "2ea84a437d448ff71b08df68fdd949d5cc4ebb64",
+    "size": 390,
+    "path": "preprocessor_config.json"
+  },
+  {
+    "type": "file",
+    "oid": "33818c7f9e991ad735fd240209f4fa73e6c28c50",
+    "size": 1191,
+    "path": "processor_config.json"
+  },
+  {
+    "type": "file",
+    "oid": "cf4663614eda68580b2c4ab29e49648a65902687",
+    "size": 36501,
+    "path": "recipe.yaml"
+  },
+  {
+    "type": "file",
+    "oid": "5520bfd2dd834ce386c1312c410fa71af56db5ad",
+    "size": 19989325,
+    "lfs": {
+      "oid": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "size": 19989325,
+      "pointerSize": 133
+    },
+    "xetHash": "777bcaa63794fa47b8f53680be9d6d176f1fcbd7ba03cdc6c3bae2b3d76b323f",
+    "path": "tokenizer.json"
+  },
+  {
+    "type": "file",
+    "oid": "1d134cd298be1e3be25db393d93a1cefe80e3214",
+    "size": 1165,
+    "path": "tokenizer_config.json"
+  },
+  {
+    "type": "file",
+    "oid": "3ba673a5ad7d4d13f54155ecd38b2a94a6dac8fe",
+    "size": 385,
+    "path": "video_preprocessor_config.json"
+  }
+]

@@ -1,0 +1,10 @@
+# Run conda env create -f environment.yml from this project directory.
+name: qwen38-bf16-vllm
+channels:
+- defaults
+dependencies:
+- python=3.12
+- pip
+- curl
+- pip:
+  - -r requirements.txt
