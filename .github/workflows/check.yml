@@ -1,0 +1,22 @@
+name: Script checks
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  offline-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Shell syntax
+        run: |
+          bash -n qwen38-27b-Base/start-qwen38-bf16-vllm.sh
+          bash -n qwen38-27b-Uncensored-HauhauCS/start-hauhau-vllm.sh
+      - name: Python syntax
+        run: python -m compileall -q qwen38-27b-Base benchmarks tests
+      - name: Offline regression tests
+        run: python -m unittest discover -s tests -v

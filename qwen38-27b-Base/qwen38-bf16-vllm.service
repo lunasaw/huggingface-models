@@ -1,0 +1,21 @@
+[Unit]
+Description=Official Qwen3.8-27B BF16 vLLM on port 18089
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=900
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=/data/ai/chenzhangyue/huggingface-models
+ExecStart=/data/ai/chenzhangyue/huggingface-models/qwen38-27b-Base/start-qwen38-bf16-vllm.sh
+Restart=always
+RestartSec=10
+TimeoutStopSec=120
+KillMode=mixed
+LimitNOFILE=65536
+StandardOutput=journal
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

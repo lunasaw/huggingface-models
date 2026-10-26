@@ -1,0 +1,29 @@
+# Local model weights and Hugging Face metadata
+/models/
+/.meta-twolven/
+
+# Runtime data and historical benchmark artifacts
+/logs/
+/results/
+/benchmarks/**/runs/
+/benchmarks/**/safe_runs/
+/benchmarks/**/diagnostics/
+/benchmarks/**/*.json
+/benchmarks/**/*.html
+/benchmarks/**/*.png
+/benchmarks/**/*.csv
+/benchmarks/**/REPORT.md
+*.log
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.DS_Store
