@@ -15,6 +15,16 @@
 /benchmarks/**/REPORT.md
 *.log
 
+# Benchmark compilation caches and raw runtime artifacts
+/benchmarks/**/triton-cache/
+/benchmarks/**/torchinductor-cache/
+/benchmarks/**/vllm-cache/
+/benchmarks/**/flashinfer-workspace/
+/benchmarks/**/requests.jsonl
+/benchmarks/**/core
+/benchmarks/**/core.[0-9]*
+/benchmarks/**/*.nvcudmp
+
 # Python caches and local environments
 __pycache__/
 *.py[cod]

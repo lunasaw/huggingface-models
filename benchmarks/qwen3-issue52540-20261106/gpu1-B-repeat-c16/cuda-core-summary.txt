@@ -1,0 +1,52 @@
+Opening GPU coredump: cuda-core.1300322.nvcudmp
+[Current focus set to CUDA kernel 0, grid 263449, block (0,0,0), thread (128,0,0), device 0, sm 0, warp 6, lane 0]
+
+CUDA Exception: Warp Out of range Address
+The exception was triggered at PC 0x7f30ebb78c30  cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0
+#0  0x00007f30ebb78d40 in cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0<<<(1,128,1),(256,1,1)>>> ()
+  Kernel Parent Dev Grid Status                                       SMs Mask   GridDim  BlockDim Invocation
+*      0      -   0 263449 Active 0x000000000000ffffffffffffffffffffffffffffffff (1,128,1) (256,1,1) cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0()
+
+Opening GPU coredump: cuda-core.1300322.nvcudmp
+[Current focus set to CUDA kernel 0, grid 263449, block (0,0,0), thread (128,0,0), device 0, sm 0, warp 6, lane 0]
+
+CUDA Exception: Warp Out of range Address
+The exception was triggered at PC 0x7f30ebb78c30  cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0
+#0  0x00007f30ebb78d40 in cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0<<<(1,128,1),(256,1,1)>>> ()
+   0x7f30ebb78bf0 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18160>:	FMUL.FTZ R31,R31,UR56
+   0x7f30ebb78c00 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18176>:	MOV R27,UR11
+   0x7f30ebb78c10 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18192>:	FMUL.FTZ R33,R33,UR56
+   0x7f30ebb78c20 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18208>:	FMUL.FTZ R34,R34,UR56
+*> 0x7f30ebb78c30 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18224>:	@!P4 STG.E.128 desc[UR36][R24.64],R36
+   0x7f30ebb78c40 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18240>:	F2FP.BF16.F32.PACK_AB R40,R31,R30
+   0x7f30ebb78c50 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18256>:	@!P5 IADD.64 R26,R6,R26
+   0x7f30ebb78c60 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18272>:	IADD3 R28,PT,PT,R0,0x30,RZ
+   0x7f30ebb78c70 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18288>:	F2FP.BF16.F32.PACK_AB R43,R34,R33
+   0x7f30ebb78c80 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18304>:	IADD3 R0,PT,PT,R0,0x38,RZ
+   0x7f30ebb78c90 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18320>:	FMUL.FTZ R8,R8,UR18
+   0x7f30ebb78ca0 <cudnn_generated_fort_native_sm120_matMul_pointwise_pointwise_knob_10_128x256x64_0_0+18336>:	FMUL.FTZ R9,R9,UR18
+R0             0xd9f9d6ed          3657029357
+R1             0xb310ac56          3004214358
+R2             0xdabfc975          3670002037
+R3             0x69ccc0f1          1775026417
+R4             0x2bebae81          736865921
+R5             0xbc04e6d9          3154437849
+R6             0xb89d9c5d          3097336925
+R7             0x513e2f7c          1363029884
+R8             0x80000000          2147483648
+R9             0x0                 0
+R10            0x80000000          2147483648
+R11            0x80000000          2147483648
+R12            0x80000000          2147483648
+R16            0x607fa795          1618978709
+R17            0x24d81d6           38633942
+R18            0x225f7ff1          576684017
+R19            0x66df442e          1725908014
+UR4            0x60                96
+UR5            0x60                96
+UR6            0x60                96
+UR7            0x60                96
+UR8            0x0                 0
+UR9            0x0                 0
+UR10           0x60                96
+UR11           0x10                16
